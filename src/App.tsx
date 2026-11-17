@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { OPERADORES_ESCALA, Operador, Pausa } from './data/operadores';
+import { OPERADORES_ESCALA, Operador } from './data/operadores';
 import { OperatorSelector } from './components/OperatorSelector';
 import { OperatorDashboard } from './components/OperatorDashboard';
 import { ActiveBreakAlert, BreakAlertModal } from './components/BreakAlertModal';
@@ -25,7 +25,6 @@ import {
 const STORAGE_OPERATOR_KEY = 'sinalizador_operador_nome';
 const STORAGE_ACK_KEY = 'sinalizador_pausas_sinalizadas';
 const STORAGE_THEME_KEY = 'sinalizador_tema';
-const STORAGE_CUSTOM_SCHEDULES_KEY = 'sinalizador_escala_custom';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -38,36 +37,13 @@ function loadInitialTheme(): ThemeMode {
   }
 }
 
-function loadSavedOperatorName(): string | null {
+function loadSavedOperator(): Operador | null {
   try {
     const savedName = localStorage.getItem(STORAGE_OPERATOR_KEY);
     if (!savedName) return null;
-    const exists = OPERADORES_ESCALA.some((op) => op.nome === savedName);
-    return exists ? savedName : null;
+    return OPERADORES_ESCALA.find((op) => op.nome === savedName) ?? null;
   } catch {
     return null;
-  }
-}
-
-function loadCustomSchedules(): Record<string, Pausa[]> {
-  try {
-    const raw = localStorage.getItem(STORAGE_CUSTOM_SCHEDULES_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return {};
-    }
-    return parsed as Record<string, Pausa[]>;
-  } catch {
-    return {};
-  }
-}
-
-function saveCustomSchedules(data: Record<string, Pausa[]>): void {
-  try {
-    localStorage.setItem(STORAGE_CUSTOM_SCHEDULES_KEY, JSON.stringify(data));
-  } catch {
-    // Ignora falha de armazenamento em navegação privada restrita
   }
 }
 
@@ -99,11 +75,8 @@ function saveAcknowledgedKeys(keys: Set<string>, todayKey: string): void {
 }
 
 export default function App() {
-  const [selectedOperatorName, setSelectedOperatorName] = useState<string | null>(() =>
-    loadSavedOperatorName(),
-  );
-  const [customSchedules, setCustomSchedules] = useState<Record<string, Pausa[]>>(() =>
-    loadCustomSchedules(),
+  const [selectedOperador, setSelectedOperador] = useState<Operador | null>(() =>
+    loadSavedOperator(),
   );
   const [now, setNow] = useState<Date>(() => new Date());
   const [acknowledgedKeys, setAcknowledgedKeys] = useState<Set<string>>(() =>
@@ -181,18 +154,6 @@ export default function App() {
       return prev;
     });
   }, [todayKey]);
-
-  const allOperadores = useMemo<Operador[]>(() => {
-    return OPERADORES_ESCALA.map((op) => ({
-      nome: op.nome,
-      pausas: customSchedules[op.nome] ?? op.pausas,
-    }));
-  }, [customSchedules]);
-
-  const selectedOperador = useMemo<Operador | null>(() => {
-    if (!selectedOperatorName) return null;
-    return allOperadores.find((op) => op.nome === selectedOperatorName) ?? null;
-  }, [allOperadores, selectedOperatorName]);
 
   // Regra automática: verificar a cada segundo se faltam 10 minutos ou 5 minutos para alguma pausa
   useEffect(() => {
@@ -279,7 +240,7 @@ export default function App() {
       // Ignora erro de localStorage se bloqueado
     }
     triggeredKeysRef.current.clear();
-    setSelectedOperatorName(operador.nome);
+    setSelectedOperador(operador);
     setActivationFeedback(null);
   }, []);
 
@@ -292,28 +253,8 @@ export default function App() {
     } catch {
       // Ignora erro de localStorage se bloqueado
     }
-    setSelectedOperatorName(null);
+    setSelectedOperador(null);
     setActivationFeedback(null);
-  }, []);
-
-  const handleSaveOperatorBreaks = useCallback(
-    (operatorName: string, pausas: Pausa[]) => {
-      setCustomSchedules((prev) => {
-        const next = { ...prev, [operatorName]: pausas };
-        saveCustomSchedules(next);
-        return next;
-      });
-    },
-    [],
-  );
-
-  const handleResetOperatorBreaks = useCallback((operatorName: string) => {
-    setCustomSchedules((prev) => {
-      const next = { ...prev };
-      delete next[operatorName];
-      saveCustomSchedules(next);
-      return next;
-    });
   }, []);
 
   const handleActivateAlerts = useCallback(async () => {
@@ -355,7 +296,6 @@ export default function App() {
       {selectedOperador ? (
         <OperatorDashboard
           operador={selectedOperador}
-          customSchedules={customSchedules}
           now={now}
           pausas={enrichedPausas}
           audioUnlocked={audioUnlocked}
@@ -364,13 +304,11 @@ export default function App() {
           theme={theme}
           onToggleTheme={handleToggleTheme}
           onActivateAlerts={handleActivateAlerts}
-          onSaveOperatorBreaks={handleSaveOperatorBreaks}
-          onResetOperatorBreaks={handleResetOperatorBreaks}
           onSwitchOperator={handleSwitchOperator}
         />
       ) : (
         <OperatorSelector
-          operadores={allOperadores}
+          operadores={OPERADORES_ESCALA}
           theme={theme}
           onToggleTheme={handleToggleTheme}
           onSelectOperator={handleSelectOperator}

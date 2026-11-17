@@ -238,6 +238,7 @@ export function sendBreakBrowserNotification(
 
     const notification = new Notification(title, {
       body,
+      icon: '/assets/aistudio/image_0674f66e.png',
       tag: `break-${operatorName}-${breakType}-${breakTime}-${minutesBefore}m`,
       requireInteraction: true,
     });

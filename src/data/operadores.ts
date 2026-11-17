@@ -30,14 +30,6 @@ export interface Operador {
  */
 export const OPERADORES_ESCALA: Operador[] = [
   {
-    nome: "OPERADOR TESTE",
-    pausas: [
-      { tipo: "Pausa 1", horario: "09:00", horarioFim: "09:10" },
-      { tipo: "Lanche", horario: "12:00", horarioFim: "12:20" },
-      { tipo: "Pausa 2", horario: "15:00", horarioFim: "15:10" },
-    ],
-  },
-  {
     nome: "LILIANE RODRIGUES DE OLIVEIRA",
     pausas: [
       { tipo: "Pausa 1", horario: "01:00", horarioFim: "01:10" },

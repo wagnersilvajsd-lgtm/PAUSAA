@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Bell,
   BellOff,
@@ -6,14 +6,12 @@ import {
   Clock,
   LogOut,
   Moon,
-  Pencil,
   Sun,
   Volume2,
   VolumeX,
   Timer,
 } from 'lucide-react';
-import { Operador, Pausa } from '../data/operadores';
-import { BreakEditorTab } from './BreakEditorTab';
+import { Operador } from '../data/operadores';
 import {
   EnrichedPausa,
   formatCountdown,
@@ -23,11 +21,8 @@ import {
 } from '../utils/schedule';
 import { NotificationPermissionState } from '../utils/audioAndNotification';
 
-type DashboardTab = 'panel' | 'edit';
-
 interface OperatorDashboardProps {
   operador: Operador;
-  customSchedules: Record<string, Pausa[]>;
   now: Date;
   pausas: EnrichedPausa[];
   audioUnlocked: boolean;
@@ -36,14 +31,11 @@ interface OperatorDashboardProps {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
   onActivateAlerts: () => void;
-  onSaveOperatorBreaks: (operatorName: string, pausas: Pausa[]) => void;
-  onResetOperatorBreaks: (operatorName: string) => void;
   onSwitchOperator: () => void;
 }
 
 export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
   operador,
-  customSchedules,
   now,
   pausas,
   audioUnlocked,
@@ -52,16 +44,8 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
   theme,
   onToggleTheme,
   onActivateAlerts,
-  onSaveOperatorBreaks,
-  onResetOperatorBreaks,
   onSwitchOperator,
 }) => {
-  const isTestOperator = operador.nome === 'OPERADOR TESTE';
-  const [activeTab, setActiveTab] = useState<DashboardTab>('panel');
-
-  useEffect(() => {
-    setActiveTab('panel');
-  }, [operador.nome]);
   const nowSeconds = getSecondsOfDay(now);
   const nextBreak = pausas.find((p) => p.status === 'proxima') ?? null;
   const completedCount = pausas.filter((p) => p.status === 'concluida').length;
@@ -89,8 +73,13 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors">
       <header className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between gap-6">
-          <div className="flex items-center gap-2.5 whitespace-nowrap shrink-0">
-            <Clock className="w-5 h-5 text-blue-700 dark:text-blue-400" aria-hidden="true" />
+          <div className="flex items-center gap-3 whitespace-nowrap shrink-0">
+            <img
+              src="/assets/aistudio/image_0674f66e.png"
+              alt="JSD Telecom"
+              referrerPolicy="no-referrer"
+              className="w-8 h-8 rounded-md object-contain bg-white p-0.5 border border-slate-200 dark:border-slate-700 shrink-0"
+            />
             <span className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
               Sinalizador de Pausas
             </span>
@@ -135,59 +124,9 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-5xl mx-auto px-6 py-8 sm:py-10 space-y-6">
-        {isTestOperator && (
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div
-              role="tablist"
-              aria-label="Seções do painel"
-              className="inline-flex items-center gap-1 p-1 bg-slate-200/70 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'panel'}
-                onClick={() => setActiveTab('panel')}
-                className={`h-9 px-4 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-2 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:focus-visible:ring-blue-400 ${
-                  activeTab === 'panel'
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
-                <Clock className="w-4 h-4 shrink-0" aria-hidden="true" />
-                <span>Painel do Operador</span>
-              </button>
-
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'edit'}
-                onClick={() => setActiveTab('edit')}
-                className={`h-9 px-4 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-2 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:focus-visible:ring-blue-400 ${
-                  activeTab === 'edit'
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
-                <Pencil className="w-4 h-4 shrink-0" aria-hidden="true" />
-                <span>Edição de Pausas</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {isTestOperator && activeTab === 'edit' ? (
-          <BreakEditorTab
-            operador={operador}
-            hasCustomOverride={Boolean(customSchedules[operador.nome])}
-            onSaveOperatorBreaks={onSaveOperatorBreaks}
-            onResetOperatorBreaks={onResetOperatorBreaks}
-            onBackToPanel={() => setActiveTab('panel')}
-          />
-        ) : (
-          <div className="space-y-8">
-            {/* Linha principal: Relógio + Contagem Regressiva e Controles de Alerta */}
-            <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      <main className="flex-1 w-full max-w-5xl mx-auto px-6 py-8 sm:py-10 space-y-8">
+        {/* Linha principal: Relógio + Contagem Regressiva e Controles de Alerta */}
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-7 sm:p-8 flex flex-col justify-between">
             <div>
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500 dark:text-slate-400">
@@ -362,20 +301,8 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
                 Acompanhamento automático dos horários programados para o seu turno
               </p>
             </div>
-            <div className="flex items-center gap-4 shrink-0">
-              <div className="text-sm text-slate-600 dark:text-slate-400 font-mono tabular-nums">
-                {completedCount} de {pausas.length} concluídas
-              </div>
-              {isTestOperator && (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('edit')}
-                  className="h-9 px-3.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-sm font-medium text-blue-700 dark:text-blue-300 transition-colors inline-flex items-center gap-2 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:focus-visible:ring-blue-400"
-                >
-                  <Pencil className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                  <span>Alterar Pausas</span>
-                </button>
-              )}
+            <div className="text-sm text-slate-600 dark:text-slate-400 font-mono tabular-nums">
+              {completedCount} de {pausas.length} concluídas
             </div>
           </div>
 
@@ -499,8 +426,6 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
             </table>
           </div>
         </section>
-          </div>
-        )}
       </main>
     </div>
   );

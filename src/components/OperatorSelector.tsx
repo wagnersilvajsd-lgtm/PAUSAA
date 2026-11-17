@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { Search, ChevronDown, Check, ArrowRight, Clock, Moon, Sun } from 'lucide-react';
+import { Search, ChevronDown, Check, ArrowRight, Moon, Sun } from 'lucide-react';
 import { Operador } from '../data/operadores';
 
 interface OperatorSelectorProps {
@@ -108,8 +108,13 @@ export const OperatorSelector: React.FC<OperatorSelectorProps> = ({
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors">
       <header className="w-full border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between gap-8">
-          <div className="flex items-center gap-2.5 whitespace-nowrap shrink-0">
-            <Clock className="w-5 h-5 text-blue-700 dark:text-blue-400" aria-hidden="true" />
+          <div className="flex items-center gap-3 whitespace-nowrap shrink-0">
+            <img
+              src="/assets/aistudio/image_0674f66e.png"
+              alt="JSD Telecom"
+              referrerPolicy="no-referrer"
+              className="w-8 h-8 rounded-md object-contain bg-white p-0.5 border border-slate-200 dark:border-slate-700 shrink-0"
+            />
             <span className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
               Sinalizador de Pausas
             </span>
