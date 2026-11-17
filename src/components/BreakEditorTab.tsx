@@ -7,10 +7,8 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react';
-import { Operador, Pausa } from '../data/operadores';
+import { getOperatorAlertStages, Operador, Pausa } from '../data/operadores';
 import {
-  ALERT_10_SECONDS,
-  ALERT_5_SECONDS,
   formatSecondsToHHMM,
   parseHorarioToSeconds,
 } from '../utils/schedule';
@@ -34,6 +32,7 @@ export const BreakEditorTab: React.FC<BreakEditorTabProps> = ({
   onResetOperatorBreaks,
   onBackToPanel,
 }) => {
+  const [firstAlertMin, secondAlertMin] = getOperatorAlertStages(operador.nome);
   const [draftPausas, setDraftPausas] = useState<Pausa[]>(() =>
     operador.pausas.map((p) => ({ ...p })),
   );
@@ -118,7 +117,7 @@ export const BreakEditorTab: React.FC<BreakEditorTabProps> = ({
     setDraftPausas(cleaned.map((p) => ({ ...p })));
     setErrorMessage(null);
     setSuccessMessage(
-      `Pausas de ${operador.nome} atualizadas. Os avisos automáticos de 10 e 5 minutos já utilizam os novos horários.`,
+      `Pausas de ${operador.nome} atualizadas. Os avisos automáticos de ${firstAlertMin} e ${secondAlertMin} minutos já utilizam os novos horários.`,
     );
   };
 
@@ -138,7 +137,7 @@ export const BreakEditorTab: React.FC<BreakEditorTabProps> = ({
             Alterar Pausas — {operador.nome}
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Ajuste os horários deste operador para validar a contagem regressiva e os disparos automáticos com voz (10m e 5m antes).
+            Ajuste os horários deste operador para validar a contagem regressiva e os disparos automáticos com voz ({firstAlertMin}m e {secondAlertMin}m antes).
           </p>
         </div>
 
@@ -174,18 +173,18 @@ export const BreakEditorTab: React.FC<BreakEditorTabProps> = ({
               <div className="col-span-4">Tipo da Pausa</div>
               <div className="col-span-2">Início</div>
               <div className="col-span-2">Término (opcional)</div>
-              <div className="col-span-3 text-right">Avisos (10m · 5m)</div>
+              <div className="col-span-3 text-right">Avisos ({firstAlertMin}m · {secondAlertMin}m)</div>
               <div className="col-span-1 text-right">Ação</div>
             </div>
 
             {draftPausas.map((pausa, index) => {
               const valid = isValidTimeFormat(pausa.horario);
               const startSec = valid ? parseHorarioToSeconds(pausa.horario) : 0;
-              const alert10 = valid
-                ? formatSecondsToHHMM(startSec - ALERT_10_SECONDS)
+              const alertFirst = valid
+                ? formatSecondsToHHMM(startSec - firstAlertMin * 60)
                 : '--:--';
-              const alert5 = valid
-                ? formatSecondsToHHMM(startSec - ALERT_5_SECONDS)
+              const alertSecond = valid
+                ? formatSecondsToHHMM(startSec - secondAlertMin * 60)
                 : '--:--';
 
               return (
@@ -249,9 +248,9 @@ export const BreakEditorTab: React.FC<BreakEditorTabProps> = ({
                   </div>
 
                   <div className="md:col-span-3 flex items-center justify-between md:justify-end text-xs font-mono tabular-nums text-slate-600 dark:text-slate-400">
-                    <span className="md:hidden font-sans">Avisos (10m · 5m):</span>
+                    <span className="md:hidden font-sans">Avisos ({firstAlertMin}m · {secondAlertMin}m):</span>
                     <span>
-                      {alert10} · {alert5}
+                      {alertFirst} · {alertSecond}
                     </span>
                   </div>
 

@@ -88,9 +88,7 @@ export function stopVoiceAnnouncement(): void {
 }
 
 export function getVoiceAnnouncementText(minutesBefore: AlertMinutes): string {
-  return minutesBefore === 5
-    ? 'Sua pausa começa em 5 minutos'
-    : 'Sua pausa começa em 10 minutos';
+  return `Sua pausa começa em ${minutesBefore} minutos`;
 }
 
 /**

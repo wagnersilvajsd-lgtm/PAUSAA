@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { OPERADORES_ESCALA, Operador, Pausa } from './data/operadores';
+import {
+  getOperatorAlertStages,
+  OPERADORES_ESCALA,
+  Operador,
+  Pausa,
+} from './data/operadores';
 import { OperatorSelector } from './components/OperatorSelector';
 import { OperatorDashboard } from './components/OperatorDashboard';
 import { ActiveBreakAlert, BreakAlertModal } from './components/BreakAlertModal';
 import {
-  ALERT_STAGES_MINUTES,
   buildEnrichedPausas,
   getBreakStageKey,
   getSecondsOfDay,
@@ -194,7 +198,7 @@ export default function App() {
     return allOperadores.find((op) => op.nome === selectedOperatorName) ?? null;
   }, [allOperadores, selectedOperatorName]);
 
-  // Regra automática: verificar a cada segundo se faltam 10 minutos ou 5 minutos para alguma pausa
+  // Regra automática: verificar a cada segundo os estágios configurados (25m/10m ou 10m/5m)
   useEffect(() => {
     const currentDateKey = getTodayDateKey(now);
     const currentSeconds = getSecondsOfDay(now);
@@ -206,14 +210,18 @@ export default function App() {
     }
 
     const sameDay = prev.dateKey === currentDateKey;
+    const [firstAlertMinutes, secondAlertMinutes] = getOperatorAlertStages(
+      selectedOperador.nome,
+    );
+    const checkOrder = [secondAlertMinutes, firstAlertMinutes];
     let triggered = false;
 
     for (const pausa of selectedOperador.pausas) {
       if (triggered) break;
       const startSeconds = parseHorarioToSeconds(pausa.horario);
 
-      // Verifica primeiro o estágio de 5 minutos (mais urgente) e depois o de 10 minutos
-      for (const minutesBefore of ALERT_STAGES_MINUTES) {
+      // Verifica primeiro o estágio mais próximo da pausa e depois o primeiro aviso
+      for (const minutesBefore of checkOrder) {
         const alertSeconds = startSeconds - minutesBefore * 60;
         const breakKey = getBreakStageKey(
           currentDateKey,
@@ -245,6 +253,7 @@ export default function App() {
             breakTime: pausa.horario,
             breakKey,
             minutesBefore,
+            isFinalAlert: minutesBefore === secondAlertMinutes,
           });
           startRepeatingBreakAlertWithVoice(minutesBefore);
           sendBreakBrowserNotification(

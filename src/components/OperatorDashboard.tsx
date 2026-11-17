@@ -12,7 +12,7 @@ import {
   VolumeX,
   Timer,
 } from 'lucide-react';
-import { Operador, Pausa } from '../data/operadores';
+import { getOperatorAlertStages, Operador, Pausa } from '../data/operadores';
 import { BreakEditorTab } from './BreakEditorTab';
 import {
   EnrichedPausa,
@@ -57,6 +57,7 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
   onSwitchOperator,
 }) => {
   const isTestOperator = operador.nome === 'OPERADOR TESTE';
+  const [firstAlertMin, secondAlertMin] = getOperatorAlertStages(operador.nome);
   const [activeTab, setActiveTab] = useState<DashboardTab>('panel');
 
   useEffect(() => {
@@ -234,7 +235,7 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
                       </span>
                     </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums">
-                      Avisos automáticos às {nextBreak.alert10Horario} (10m) e {nextBreak.alert5Horario} (5m)
+                      Avisos automáticos às {nextBreak.firstAlertHorario} ({nextBreak.firstAlertMinutes}m) e {nextBreak.secondAlertHorario} ({nextBreak.secondAlertMinutes}m)
                     </p>
                   </div>
 
@@ -251,9 +252,9 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
                     </span>
                     {nextBreak.isAlertWindow && (
                       <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-400">
-                        {countdownSeconds <= 300
-                          ? 'Janela final (menos de 5 min)'
-                          : 'Janela de aviso ativa (menos de 10 min)'}
+                        {countdownSeconds <= nextBreak.secondAlertMinutes * 60
+                          ? `Janela final (menos de ${nextBreak.secondAlertMinutes} min)`
+                          : `Janela de aviso ativa (menos de ${nextBreak.firstAlertMinutes} min)`}
                       </p>
                     )}
                   </div>
@@ -283,7 +284,7 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
                 Alertas, Voz e Sons
               </h2>
               <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Libere o áudio, o aviso por voz e as notificações do navegador para receber os alertas automáticos faltando 10 e 5 minutos para cada pausa.
+                Libere o áudio, o aviso por voz e as notificações do navegador para receber os alertas automáticos faltando {firstAlertMin} e {secondAlertMin} minutos para cada pausa.
               </p>
 
               <div className="mt-6 space-y-3 pt-5 border-t border-slate-100 dark:border-slate-800 text-sm">
@@ -390,7 +391,7 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
                 <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 text-xs font-semibold text-slate-500 dark:text-slate-400">
                   <th className="py-3.5 pl-6 sm:pl-8 pr-4">Pausa</th>
                   <th className="py-3.5 px-4">Horário Programado</th>
-                  <th className="py-3.5 px-4">Avisos (10m e 5m)</th>
+                  <th className="py-3.5 px-4">Avisos ({firstAlertMin}m e {secondAlertMin}m)</th>
                   <th className="py-3.5 pl-4 pr-6 sm:pr-8 text-right">Status</th>
                 </tr>
               </thead>
@@ -400,8 +401,8 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
                   const isDone = pausa.status === 'concluida';
 
                   const ackStages: string[] = [];
-                  if (pausa.isAcknowledged10) ackStages.push('10m');
-                  if (pausa.isAcknowledged5) ackStages.push('5m');
+                  if (pausa.isAcknowledgedFirst) ackStages.push(`${pausa.firstAlertMinutes}m`);
+                  if (pausa.isAcknowledgedSecond) ackStages.push(`${pausa.secondAlertMinutes}m`);
 
                   return (
                     <tr
@@ -439,7 +440,7 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
                       </td>
 
                       <td className="py-4 px-4 font-mono tabular-nums text-slate-600 dark:text-slate-400">
-                        {pausa.alert10Horario} · {pausa.alert5Horario}
+                        {pausa.firstAlertHorario} · {pausa.secondAlertHorario}
                       </td>
 
                       <td className="py-4 pl-4 pr-6 sm:pr-8 text-right">

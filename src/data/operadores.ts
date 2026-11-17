@@ -25,9 +25,32 @@ export interface Operador {
  *     ],
  *   }
  *
- * O sinalizador disparará automaticamente 10 minutos e 5 minutos antes de cada `horario`.
+ * O sinalizador disparará automaticamente 10 e 5 minutos antes de cada `horario`
+ * (ou 25 e 10 minutos antes para os colaboradores configurados em `OPERADORES_AVISO_25_10`).
  * ============================================================================
  */
+export const OPERADORES_AVISO_25_10: ReadonlySet<string> = new Set([
+  "HYLLARY BIANKA NASCIMENTO FIRMINO",
+  "SAMARA VITÓRIA RUFINO DOS SANTOS",
+  "VICTOR SILVA DE SOUZA",
+  "GABRIEL SANTOS DA CRUZ NÓBREGA",
+  "JÚLIA MARIA SOUSA GOMES",
+  "LAIS CAMILA CANUTO PATRICIO DE ABREU",
+  "AMANDA SANT' ANNA",
+  "ANA KAROLINE DA SILVA SANTOS",
+  "LAUDENICE NASCIMENTO DA SILVA VIEIRA",
+  "LIVIA MARIA GONÇALVES BERTI",
+  "MARIA SARA CABRAL DA SILVEIRA",
+  "ALANA KETLYN DA SILVA SANTOS",
+  "GIAN GABRIEL MUNIZ TAVARES DOS SANTOS",
+  "STEFANIE HERCULANO DA SILVA",
+  "JANDERSON PAULINO DE SOUZA",
+]);
+
+export function getOperatorAlertStages(operatorName: string): [25, 10] | [10, 5] {
+  return OPERADORES_AVISO_25_10.has(operatorName) ? [25, 10] : [10, 5];
+}
+
 export const OPERADORES_ESCALA: Operador[] = [
   {
     nome: "OPERADOR TESTE",
@@ -238,7 +261,7 @@ export const OPERADORES_ESCALA: Operador[] = [
     ],
   },
   {
-    nome: "STEFANE HERCULANO DA SILVA",
+    nome: "STEFANIE HERCULANO DA SILVA",
     pausas: [
       { tipo: "Pausa 1", horario: "10:30", horarioFim: "10:40" },
       { tipo: "Lanche", horario: "12:15", horarioFim: "12:35" },

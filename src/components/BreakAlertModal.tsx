@@ -8,6 +8,7 @@ export interface ActiveBreakAlert {
   breakTime: string;
   breakKey: string;
   minutesBefore: AlertMinutes;
+  isFinalAlert: boolean;
 }
 
 interface BreakAlertModalProps {
@@ -32,7 +33,7 @@ export const BreakAlertModal: React.FC<BreakAlertModalProps> = ({
 
   if (!alert) return null;
 
-  const isUrgent5Min = alert.minutesBefore === 5;
+  const isFinal = alert.isFinalAlert;
 
   return (
     <div
@@ -45,14 +46,14 @@ export const BreakAlertModal: React.FC<BreakAlertModalProps> = ({
       <div className="w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-8 sm:p-10 text-center">
         <div
           className={`mx-auto w-16 h-16 rounded-2xl border flex items-center justify-center mb-6 ${
-            isUrgent5Min
+            isFinal
               ? 'bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-800/70'
               : 'bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800/70'
           }`}
         >
           <BellRing
             className={`w-8 h-8 ${
-              isUrgent5Min
+              isFinal
                 ? 'text-red-600 dark:text-red-400'
                 : 'text-amber-600 dark:text-amber-400'
             }`}
@@ -62,7 +63,7 @@ export const BreakAlertModal: React.FC<BreakAlertModalProps> = ({
 
         <p
           className={`text-sm font-medium mb-3 ${
-            isUrgent5Min
+            isFinal
               ? 'text-red-700 dark:text-red-400'
               : 'text-amber-700 dark:text-amber-400'
           }`}
