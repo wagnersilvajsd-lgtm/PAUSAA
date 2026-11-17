@@ -1,0 +1,6 @@
+{
+  "name": "Sinalizador de Pausas",
+  "description": "Painel do operador para acompanhamento de escala de pausas, contagem regressiva em tempo real e sinalização automática com áudio e notificação.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
