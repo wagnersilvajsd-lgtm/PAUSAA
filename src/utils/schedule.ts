@@ -108,6 +108,7 @@ export function buildEnrichedPausas(
     return {
       tipo: item.tipo,
       horario: item.horario,
+      horarioFim: item.horarioFim,
       index: idx,
       startSeconds: item.startSeconds,
       alertSeconds,

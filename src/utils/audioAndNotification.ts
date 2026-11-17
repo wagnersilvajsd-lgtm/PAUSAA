@@ -143,7 +143,6 @@ export function sendBreakBrowserNotification(
   operatorName: string,
   breakType: string,
   breakTime: string,
-  isTest = false,
 ): boolean {
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return false;
@@ -153,14 +152,12 @@ export function sendBreakBrowserNotification(
   }
 
   try {
-    const title = isTest
-      ? `Teste de Aviso — ${breakType}`
-      : `Aviso de Pausa — ${breakType}`;
+    const title = `Aviso de Pausa — ${breakType}`;
     const body = `Atenção, ${operatorName}! Sua ${breakType} começa em 10 minutos (às ${breakTime}).`;
 
     const notification = new Notification(title, {
       body,
-      tag: isTest ? `test-break-${Date.now()}` : `break-${operatorName}-${breakType}-${breakTime}`,
+      tag: `break-${operatorName}-${breakType}-${breakTime}`,
       requireInteraction: true,
     });
 

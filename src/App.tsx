@@ -20,11 +20,22 @@ import {
   sendBreakBrowserNotification,
   startRepeatingBreakAlertChime,
   stopRepeatingBreakAlertChime,
-  unlockAudioContext,
 } from './utils/audioAndNotification';
 
 const STORAGE_OPERATOR_KEY = 'sinalizador_operador_nome';
 const STORAGE_ACK_KEY = 'sinalizador_pausas_sinalizadas';
+const STORAGE_THEME_KEY = 'sinalizador_tema';
+
+type ThemeMode = 'light' | 'dark';
+
+function loadInitialTheme(): ThemeMode {
+  try {
+    const saved = localStorage.getItem(STORAGE_THEME_KEY);
+    return saved === 'light' ? 'light' : 'dark';
+  } catch {
+    return 'dark';
+  }
+}
 
 function loadSavedOperator(): Operador | null {
   try {
@@ -76,6 +87,25 @@ export default function App() {
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermissionState>(() => getNotificationPermission());
   const [activationFeedback, setActivationFeedback] = useState<string | null>(null);
+  const [theme, setTheme] = useState<ThemeMode>(() => loadInitialTheme());
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    try {
+      localStorage.setItem(STORAGE_THEME_KEY, theme);
+    } catch {
+      // Ignora erro de localStorage se bloqueado
+    }
+  }, [theme]);
+
+  const handleToggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  }, []);
 
   const triggeredKeysRef = useRef<Set<string>>(new Set());
   const lastCheckedRef = useRef<{ dateKey: string; seconds: number }>({
@@ -165,14 +195,12 @@ export default function App() {
           breakType: pausa.tipo,
           breakTime: pausa.horario,
           breakKey,
-          isTest: false,
         });
         startRepeatingBreakAlertChime();
         sendBreakBrowserNotification(
           selectedOperador.nome,
           pausa.tipo,
           pausa.horario,
-          false,
         );
         break;
       }
@@ -237,52 +265,17 @@ export default function App() {
     }
   }, []);
 
-  const handleTestPopup = useCallback(async () => {
-    if (!selectedOperador) return;
-
-    const targetBreak =
-      enrichedPausas.find((p) => p.status === 'proxima') ??
-      enrichedPausas[0] ?? {
-        tipo: 'Pausa 1',
-        horario: '10:15',
-        breakKey: `test|${selectedOperador.nome}`,
-      };
-
-    const perm = getNotificationPermission();
-    setNotificationPermission(perm);
-
-    setActiveAlert({
-      operatorName: selectedOperador.nome,
-      breakType: targetBreak.tipo,
-      breakTime: targetBreak.horario,
-      breakKey: targetBreak.breakKey,
-      isTest: true,
-    });
-
-    const unlocked = await unlockAudioContext();
-    setAudioUnlocked(unlocked || isAudioUnlocked());
-    startRepeatingBreakAlertChime();
-    sendBreakBrowserNotification(
-      selectedOperador.nome,
-      targetBreak.tipo,
-      targetBreak.horario,
-      true,
-    );
-  }, [selectedOperador, enrichedPausas]);
-
   const handleAcknowledgeAlert = useCallback(
     (alert: ActiveBreakAlert) => {
       stopRepeatingBreakAlertChime();
       setActiveAlert(null);
 
-      if (!alert.isTest) {
-        setAcknowledgedKeys((prev) => {
-          const next = new Set(prev);
-          next.add(alert.breakKey);
-          saveAcknowledgedKeys(next, getTodayDateKey(new Date()));
-          return next;
-        });
-      }
+      setAcknowledgedKeys((prev) => {
+        const next = new Set(prev);
+        next.add(alert.breakKey);
+        saveAcknowledgedKeys(next, getTodayDateKey(new Date()));
+        return next;
+      });
     },
     [],
   );
@@ -297,13 +290,16 @@ export default function App() {
           audioUnlocked={audioUnlocked}
           notificationPermission={notificationPermission}
           activationFeedback={activationFeedback}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
           onActivateAlerts={handleActivateAlerts}
-          onTestPopup={handleTestPopup}
           onSwitchOperator={handleSwitchOperator}
         />
       ) : (
         <OperatorSelector
           operadores={OPERADORES_ESCALA}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
           onSelectOperator={handleSelectOperator}
         />
       )}
