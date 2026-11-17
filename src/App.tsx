@@ -4,9 +4,9 @@ import { OperatorSelector } from './components/OperatorSelector';
 import { OperatorDashboard } from './components/OperatorDashboard';
 import { ActiveBreakAlert, BreakAlertModal } from './components/BreakAlertModal';
 import {
-  ALERT_ADVANCE_SECONDS,
+  ALERT_STAGES_MINUTES,
   buildEnrichedPausas,
-  getBreakKey,
+  getBreakStageKey,
   getSecondsOfDay,
   getTodayDateKey,
   parseHorarioToSeconds,
@@ -18,8 +18,8 @@ import {
   playConfirmationTone,
   requestBrowserNotificationPermission,
   sendBreakBrowserNotification,
-  startRepeatingBreakAlertChime,
-  stopRepeatingBreakAlertChime,
+  startRepeatingBreakAlertWithVoice,
+  stopRepeatingBreakAlertWithVoice,
 } from './utils/audioAndNotification';
 
 const STORAGE_OPERATOR_KEY = 'sinalizador_operador_nome';
@@ -140,10 +140,10 @@ export default function App() {
     seconds: getSecondsOfDay(new Date()),
   });
 
-  // Limpa timers sonoros se o componente desmontar
+  // Limpa timers sonoros e síntese de voz se o componente desmontar
   useEffect(() => {
     return () => {
-      stopRepeatingBreakAlertChime();
+      stopRepeatingBreakAlertWithVoice();
     };
   }, []);
 
@@ -194,7 +194,7 @@ export default function App() {
     return allOperadores.find((op) => op.nome === selectedOperatorName) ?? null;
   }, [allOperadores, selectedOperatorName]);
 
-  // Regra automática: verificar a cada segundo se faltam exatamente 10 minutos para alguma pausa
+  // Regra automática: verificar a cada segundo se faltam 10 minutos ou 5 minutos para alguma pausa
   useEffect(() => {
     const currentDateKey = getTodayDateKey(now);
     const currentSeconds = getSecondsOfDay(now);
@@ -206,42 +206,56 @@ export default function App() {
     }
 
     const sameDay = prev.dateKey === currentDateKey;
+    let triggered = false;
 
     for (const pausa of selectedOperador.pausas) {
+      if (triggered) break;
       const startSeconds = parseHorarioToSeconds(pausa.horario);
-      const alertSeconds = startSeconds - ALERT_ADVANCE_SECONDS;
-      const breakKey = getBreakKey(currentDateKey, selectedOperador.nome, pausa);
 
-      if (
-        acknowledgedKeys.has(breakKey) ||
-        triggeredKeysRef.current.has(breakKey)
-      ) {
-        continue;
-      }
-
-      const insideExactAlertMinute =
-        currentSeconds >= alertSeconds && currentSeconds < alertSeconds + 60;
-      const crossedAlertThresholdInTab =
-        sameDay &&
-        prev.seconds < alertSeconds &&
-        currentSeconds >= alertSeconds &&
-        currentSeconds < startSeconds;
-
-      if (insideExactAlertMinute || crossedAlertThresholdInTab) {
-        triggeredKeysRef.current.add(breakKey);
-        setActiveAlert({
-          operatorName: selectedOperador.nome,
-          breakType: pausa.tipo,
-          breakTime: pausa.horario,
-          breakKey,
-        });
-        startRepeatingBreakAlertChime();
-        sendBreakBrowserNotification(
+      // Verifica primeiro o estágio de 5 minutos (mais urgente) e depois o de 10 minutos
+      for (const minutesBefore of ALERT_STAGES_MINUTES) {
+        const alertSeconds = startSeconds - minutesBefore * 60;
+        const breakKey = getBreakStageKey(
+          currentDateKey,
           selectedOperador.nome,
-          pausa.tipo,
-          pausa.horario,
+          pausa,
+          minutesBefore,
         );
-        break;
+
+        if (
+          acknowledgedKeys.has(breakKey) ||
+          triggeredKeysRef.current.has(breakKey)
+        ) {
+          continue;
+        }
+
+        const insideExactAlertMinute =
+          currentSeconds >= alertSeconds && currentSeconds < alertSeconds + 60;
+        const crossedAlertThresholdInTab =
+          sameDay &&
+          prev.seconds < alertSeconds &&
+          currentSeconds >= alertSeconds &&
+          currentSeconds < startSeconds;
+
+        if (insideExactAlertMinute || crossedAlertThresholdInTab) {
+          triggeredKeysRef.current.add(breakKey);
+          setActiveAlert({
+            operatorName: selectedOperador.nome,
+            breakType: pausa.tipo,
+            breakTime: pausa.horario,
+            breakKey,
+            minutesBefore,
+          });
+          startRepeatingBreakAlertWithVoice(minutesBefore);
+          sendBreakBrowserNotification(
+            selectedOperador.nome,
+            pausa.tipo,
+            pausa.horario,
+            minutesBefore,
+          );
+          triggered = true;
+          break;
+        }
       }
     }
 
@@ -270,7 +284,7 @@ export default function App() {
   }, []);
 
   const handleSwitchOperator = useCallback(() => {
-    stopRepeatingBreakAlertChime();
+    stopRepeatingBreakAlertWithVoice();
     setActiveAlert(null);
     triggeredKeysRef.current.clear();
     try {
@@ -310,13 +324,13 @@ export default function App() {
     setNotificationPermission(perm);
 
     if (soundOk && perm === 'granted') {
-      setActivationFeedback('Áudio liberado e notificações do sistema ativadas.');
+      setActivationFeedback('Áudio, voz e notificações do sistema ativados.');
     } else if (soundOk && perm === 'denied') {
       setActivationFeedback(
-        'Áudio liberado. Notificações bloqueadas no navegador — libere nas permissões do site se desejar avisos na área de trabalho.',
+        'Áudio e voz liberados. Notificações bloqueadas no navegador — libere nas permissões do site se desejar avisos na área de trabalho.',
       );
     } else if (soundOk) {
-      setActivationFeedback('Áudio liberado para alertas neste painel.');
+      setActivationFeedback('Áudio e voz liberados para alertas neste painel.');
     } else {
       setActivationFeedback(
         'Não foi possível inicializar o áudio automaticamente. Verifique o som do dispositivo.',
@@ -324,20 +338,17 @@ export default function App() {
     }
   }, []);
 
-  const handleAcknowledgeAlert = useCallback(
-    (alert: ActiveBreakAlert) => {
-      stopRepeatingBreakAlertChime();
-      setActiveAlert(null);
+  const handleAcknowledgeAlert = useCallback((alert: ActiveBreakAlert) => {
+    stopRepeatingBreakAlertWithVoice();
+    setActiveAlert(null);
 
-      setAcknowledgedKeys((prev) => {
-        const next = new Set(prev);
-        next.add(alert.breakKey);
-        saveAcknowledgedKeys(next, getTodayDateKey(new Date()));
-        return next;
-      });
-    },
-    [],
-  );
+    setAcknowledgedKeys((prev) => {
+      const next = new Set(prev);
+      next.add(alert.breakKey);
+      saveAcknowledgedKeys(next, getTodayDateKey(new Date()));
+      return next;
+    });
+  }, []);
 
   return (
     <>

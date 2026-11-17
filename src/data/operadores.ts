@@ -25,7 +25,7 @@ export interface Operador {
  *     ],
  *   }
  *
- * O sinalizador disparará automaticamente 10 minutos antes de cada `horario`.
+ * O sinalizador disparará automaticamente 10 minutos e 5 minutos antes de cada `horario`.
  * ============================================================================
  */
 export const OPERADORES_ESCALA: Operador[] = [

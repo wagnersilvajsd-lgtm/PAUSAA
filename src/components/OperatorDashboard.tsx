@@ -229,7 +229,7 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
                       </span>
                     </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums">
-                      Aviso automático programado para {nextBreak.alertHorario}
+                      Avisos automáticos às {nextBreak.alert10Horario} (10m) e {nextBreak.alert5Horario} (5m)
                     </p>
                   </div>
 
@@ -246,7 +246,9 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
                     </span>
                     {nextBreak.isAlertWindow && (
                       <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-400">
-                        Janela de aviso ativa (menos de 10 min)
+                        {countdownSeconds <= 300
+                          ? 'Janela final (menos de 5 min)'
+                          : 'Janela de aviso ativa (menos de 10 min)'}
                       </p>
                     )}
                   </div>
@@ -273,10 +275,10 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
           <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-7 sm:p-8 flex flex-col justify-between">
             <div>
               <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                Alertas e Sons
+                Alertas, Voz e Sons
               </h2>
               <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Libere o áudio e as notificações do navegador para receber o aviso automático 10 minutos antes de cada pausa.
+                Libere o áudio, o aviso por voz e as notificações do navegador para receber os alertas automáticos faltando 10 e 5 minutos para cada pausa.
               </p>
 
               <div className="mt-6 space-y-3 pt-5 border-t border-slate-100 dark:border-slate-800 text-sm">
@@ -287,7 +289,7 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
                     ) : (
                       <VolumeX className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" aria-hidden="true" />
                     )}
-                    <span>Áudio do navegador</span>
+                    <span>Áudio e voz do navegador</span>
                   </span>
                   <span
                     className={`font-medium ${
@@ -383,7 +385,7 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
                 <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 text-xs font-semibold text-slate-500 dark:text-slate-400">
                   <th className="py-3.5 pl-6 sm:pl-8 pr-4">Pausa</th>
                   <th className="py-3.5 px-4">Horário Programado</th>
-                  <th className="py-3.5 px-4">Aviso (10 min antes)</th>
+                  <th className="py-3.5 px-4">Avisos (10m e 5m)</th>
                   <th className="py-3.5 pl-4 pr-6 sm:pr-8 text-right">Status</th>
                 </tr>
               </thead>
@@ -391,6 +393,10 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
                 {pausas.map((pausa) => {
                   const isNext = pausa.status === 'proxima';
                   const isDone = pausa.status === 'concluida';
+
+                  const ackStages: string[] = [];
+                  if (pausa.isAcknowledged10) ackStages.push('10m');
+                  if (pausa.isAcknowledged5) ackStages.push('5m');
 
                   return (
                     <tr
@@ -428,7 +434,7 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
                       </td>
 
                       <td className="py-4 px-4 font-mono tabular-nums text-slate-600 dark:text-slate-400">
-                        {pausa.alertHorario}
+                        {pausa.alert10Horario} · {pausa.alert5Horario}
                       </td>
 
                       <td className="py-4 pl-4 pr-6 sm:pr-8 text-right">
@@ -479,9 +485,9 @@ export const OperatorDashboard: React.FC<OperatorDashboardProps> = ({
                             </>
                           )}
 
-                          {pausa.isAcknowledged && (
+                          {ackStages.length > 0 && (
                             <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
-                              · Sinalizada
+                              · Sinalizada ({ackStages.join(' e ')})
                             </span>
                           )}
                         </div>

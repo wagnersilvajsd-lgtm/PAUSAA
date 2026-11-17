@@ -1,7 +1,10 @@
+import { AlertMinutes } from './schedule';
+
 export type NotificationPermissionState = NotificationPermission | 'unsupported';
 
 let sharedAudioContext: AudioContext | null = null;
 let repeatingAlertTimer: number | null = null;
+let pendingVoiceTimer: number | null = null;
 
 function getOrCreateAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -32,8 +35,66 @@ export async function unlockAudioContext(): Promise<boolean> {
   }
 }
 
+function getPortugueseVoice(): SpeechSynthesisVoice | null {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    return null;
+  }
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return null;
+
+  return (
+    voices.find((v) => v.lang.toLowerCase() === 'pt-br') ??
+    voices.find((v) => v.lang.toLowerCase().startsWith('pt')) ??
+    null
+  );
+}
+
+export function speakMessagePtBr(message: string): boolean {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    return false;
+  }
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(message);
+    utterance.lang = 'pt-BR';
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    const ptVoice = getPortugueseVoice();
+    if (ptVoice) {
+      utterance.voice = ptVoice;
+    }
+
+    window.speechSynthesis.speak(utterance);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function stopVoiceAnnouncement(): void {
+  if (pendingVoiceTimer !== null) {
+    window.clearTimeout(pendingVoiceTimer);
+    pendingVoiceTimer = null;
+  }
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch {
+      // Ignora erro ao cancelar síntese de voz
+    }
+  }
+}
+
+export function getVoiceAnnouncementText(minutesBefore: AlertMinutes): string {
+  return minutesBefore === 5
+    ? 'Sua pausa começa em 5 minutos'
+    : 'Sua pausa começa em 10 minutos';
+}
+
 /**
- * Toca um breve sinal sonoro de confirmação ao ativar os alertas.
+ * Toca um breve sinal sonoro e confirma a voz ao ativar os alertas.
  */
 export async function playConfirmationTone(): Promise<boolean> {
   const unlocked = await unlockAudioContext();
@@ -61,11 +122,18 @@ export async function playConfirmationTone(): Promise<boolean> {
     osc.stop(start + 0.26);
   });
 
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    window.speechSynthesis.getVoices();
+    pendingVoiceTimer = window.setTimeout(() => {
+      speakMessagePtBr('Alertas e voz ativados');
+    }, 320);
+  }
+
   return true;
 }
 
 /**
- * Toca um alerta sonoro perceptível via Web Audio API (sequência dupla clara).
+ * Toca um alerta sonoro perceptível via Web Audio API.
  */
 export async function playBreakAlertChime(): Promise<boolean> {
   const unlocked = await unlockAudioContext();
@@ -73,13 +141,11 @@ export async function playBreakAlertChime(): Promise<boolean> {
   if (!unlocked || !ctx) return false;
 
   const now = ctx.currentTime;
-  // Sequência de 3 toques claros e perceptíveis para ambiente operacional
   const sequence = [
     { offset: 0, freq: 783.99, duration: 0.18 }, // G5
     { offset: 0.2, freq: 1046.5, duration: 0.24 }, // C6
     { offset: 0.52, freq: 783.99, duration: 0.18 }, // G5
     { offset: 0.72, freq: 1046.5, duration: 0.28 }, // C6
-    { offset: 1.1, freq: 1174.66, duration: 0.36 }, // D6
   ];
 
   sequence.forEach(({ offset, freq, duration }) => {
@@ -103,19 +169,33 @@ export async function playBreakAlertChime(): Promise<boolean> {
   return true;
 }
 
-export function startRepeatingBreakAlertChime(): void {
-  stopRepeatingBreakAlertChime();
-  void playBreakAlertChime();
-  repeatingAlertTimer = window.setInterval(() => {
+/**
+ * Dispara o sinal sonoro seguido da mensagem de voz ("Sua pausa começa em 10 minutos"
+ * ou "Sua pausa começa em 5 minutos") e repete periodicamente até o operador fechar o aviso.
+ */
+export function startRepeatingBreakAlertWithVoice(
+  minutesBefore: AlertMinutes,
+): void {
+  stopRepeatingBreakAlertWithVoice();
+
+  const triggerCycle = () => {
     void playBreakAlertChime();
-  }, 8000);
+    const text = getVoiceAnnouncementText(minutesBefore);
+    pendingVoiceTimer = window.setTimeout(() => {
+      speakMessagePtBr(text);
+    }, 1050);
+  };
+
+  triggerCycle();
+  repeatingAlertTimer = window.setInterval(triggerCycle, 9000);
 }
 
-export function stopRepeatingBreakAlertChime(): void {
+export function stopRepeatingBreakAlertWithVoice(): void {
   if (repeatingAlertTimer !== null) {
     window.clearInterval(repeatingAlertTimer);
     repeatingAlertTimer = null;
   }
+  stopVoiceAnnouncement();
 }
 
 export function getNotificationPermission(): NotificationPermissionState {
@@ -143,6 +223,7 @@ export function sendBreakBrowserNotification(
   operatorName: string,
   breakType: string,
   breakTime: string,
+  minutesBefore: AlertMinutes,
 ): boolean {
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return false;
@@ -152,12 +233,12 @@ export function sendBreakBrowserNotification(
   }
 
   try {
-    const title = `Aviso de Pausa — ${breakType}`;
-    const body = `Atenção, ${operatorName}! Sua ${breakType} começa em 10 minutos (às ${breakTime}).`;
+    const title = `Aviso de Pausa (${minutesBefore} min) — ${breakType}`;
+    const body = `Atenção, ${operatorName}! Sua ${breakType} começa em ${minutesBefore} minutos (às ${breakTime}).`;
 
     const notification = new Notification(title, {
       body,
-      tag: `break-${operatorName}-${breakType}-${breakTime}`,
+      tag: `break-${operatorName}-${breakType}-${breakTime}-${minutesBefore}m`,
       requireInteraction: true,
     });
 

@@ -1,20 +1,26 @@
 import { Pausa } from '../data/operadores';
 
 export type BreakStatus = 'concluida' | 'proxima' | 'agendada';
+export type AlertMinutes = 10 | 5;
 
 export interface EnrichedPausa extends Pausa {
   index: number;
   startSeconds: number;
-  alertSeconds: number;
-  alertHorario: string;
+  alert10Seconds: number;
+  alert5Seconds: number;
+  alert10Horario: string;
+  alert5Horario: string;
   status: BreakStatus;
   isAlertWindow: boolean;
-  isAcknowledged: boolean;
-  breakKey: string;
+  isAcknowledged10: boolean;
+  isAcknowledged5: boolean;
+  breakKey10: string;
+  breakKey5: string;
 }
 
-export const ALERT_ADVANCE_MINUTES = 10;
-export const ALERT_ADVANCE_SECONDS = ALERT_ADVANCE_MINUTES * 60;
+export const ALERT_STAGES_MINUTES: readonly AlertMinutes[] = [5, 10];
+export const ALERT_10_SECONDS = 10 * 60;
+export const ALERT_5_SECONDS = 5 * 60;
 
 export function parseHorarioToSeconds(horario: string): number {
   const [hhStr, mmStr] = horario.split(':');
@@ -66,8 +72,13 @@ export function getTodayDateKey(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-export function getBreakKey(dateKey: string, operatorName: string, pausa: Pausa): string {
-  return `${dateKey}|${operatorName}|${pausa.tipo}|${pausa.horario}`;
+export function getBreakStageKey(
+  dateKey: string,
+  operatorName: string,
+  pausa: Pausa,
+  minutesBefore: AlertMinutes,
+): string {
+  return `${dateKey}|${operatorName}|${pausa.tipo}|${pausa.horario}|${minutesBefore}m`;
 }
 
 export function buildEnrichedPausas(
@@ -90,10 +101,14 @@ export function buildEnrichedPausas(
   const nextIndex = sorted.findIndex((item) => item.startSeconds > nowSeconds);
 
   return sorted.map((item, idx) => {
-    const alertSeconds = item.startSeconds - ALERT_ADVANCE_SECONDS;
-    const alertHorario = formatSecondsToHHMM(alertSeconds);
-    const breakKey = getBreakKey(dateKey, operatorName, item);
-    const isAcknowledged = acknowledgedKeys.has(breakKey);
+    const alert10Seconds = item.startSeconds - ALERT_10_SECONDS;
+    const alert5Seconds = item.startSeconds - ALERT_5_SECONDS;
+    const alert10Horario = formatSecondsToHHMM(alert10Seconds);
+    const alert5Horario = formatSecondsToHHMM(alert5Seconds);
+    const breakKey10 = getBreakStageKey(dateKey, operatorName, item, 10);
+    const breakKey5 = getBreakStageKey(dateKey, operatorName, item, 5);
+    const isAcknowledged10 = acknowledgedKeys.has(breakKey10);
+    const isAcknowledged5 = acknowledgedKeys.has(breakKey5);
 
     let status: BreakStatus = 'agendada';
     if (item.startSeconds <= nowSeconds) {
@@ -103,7 +118,7 @@ export function buildEnrichedPausas(
     }
 
     const isAlertWindow =
-      nowSeconds >= alertSeconds && nowSeconds < item.startSeconds;
+      nowSeconds >= alert10Seconds && nowSeconds < item.startSeconds;
 
     return {
       tipo: item.tipo,
@@ -111,12 +126,16 @@ export function buildEnrichedPausas(
       horarioFim: item.horarioFim,
       index: idx,
       startSeconds: item.startSeconds,
-      alertSeconds,
-      alertHorario,
+      alert10Seconds,
+      alert5Seconds,
+      alert10Horario,
+      alert5Horario,
       status,
       isAlertWindow,
-      isAcknowledged,
-      breakKey,
+      isAcknowledged10,
+      isAcknowledged5,
+      breakKey10,
+      breakKey5,
     };
   });
 }

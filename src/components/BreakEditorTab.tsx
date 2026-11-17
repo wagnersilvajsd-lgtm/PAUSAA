@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { Operador, Pausa } from '../data/operadores';
 import {
-  ALERT_ADVANCE_SECONDS,
+  ALERT_10_SECONDS,
+  ALERT_5_SECONDS,
   formatSecondsToHHMM,
   parseHorarioToSeconds,
 } from '../utils/schedule';
@@ -117,7 +118,7 @@ export const BreakEditorTab: React.FC<BreakEditorTabProps> = ({
     setDraftPausas(cleaned.map((p) => ({ ...p })));
     setErrorMessage(null);
     setSuccessMessage(
-      `Pausas de ${operador.nome} atualizadas. O sinalizador automático já utiliza os novos horários.`,
+      `Pausas de ${operador.nome} atualizadas. Os avisos automáticos de 10 e 5 minutos já utilizam os novos horários.`,
     );
   };
 
@@ -137,7 +138,7 @@ export const BreakEditorTab: React.FC<BreakEditorTabProps> = ({
             Alterar Pausas — {operador.nome}
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Ajuste os horários de pausa deste operador para validar a contagem regressiva e o disparo automático 10 minutos antes.
+            Ajuste os horários deste operador para validar a contagem regressiva e os disparos automáticos com voz (10m e 5m antes).
           </p>
         </div>
 
@@ -171,17 +172,20 @@ export const BreakEditorTab: React.FC<BreakEditorTabProps> = ({
           <div className="space-y-3">
             <div className="hidden md:grid md:grid-cols-12 gap-4 px-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
               <div className="col-span-4">Tipo da Pausa</div>
-              <div className="col-span-3">Início</div>
-              <div className="col-span-3">Término (opcional)</div>
-              <div className="col-span-1 text-right">Aviso</div>
+              <div className="col-span-2">Início</div>
+              <div className="col-span-2">Término (opcional)</div>
+              <div className="col-span-3 text-right">Avisos (10m · 5m)</div>
               <div className="col-span-1 text-right">Ação</div>
             </div>
 
             {draftPausas.map((pausa, index) => {
-              const previewAlertTime = isValidTimeFormat(pausa.horario)
-                ? formatSecondsToHHMM(
-                    parseHorarioToSeconds(pausa.horario) - ALERT_ADVANCE_SECONDS,
-                  )
+              const valid = isValidTimeFormat(pausa.horario);
+              const startSec = valid ? parseHorarioToSeconds(pausa.horario) : 0;
+              const alert10 = valid
+                ? formatSecondsToHHMM(startSec - ALERT_10_SECONDS)
+                : '--:--';
+              const alert5 = valid
+                ? formatSecondsToHHMM(startSec - ALERT_5_SECONDS)
                 : '--:--';
 
               return (
@@ -208,7 +212,7 @@ export const BreakEditorTab: React.FC<BreakEditorTabProps> = ({
                     />
                   </div>
 
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-2">
                     <label
                       htmlFor={`pausa-inicio-${index}`}
                       className="block md:hidden text-xs font-medium text-slate-500 dark:text-slate-400 mb-1"
@@ -226,7 +230,7 @@ export const BreakEditorTab: React.FC<BreakEditorTabProps> = ({
                     />
                   </div>
 
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-2">
                     <label
                       htmlFor={`pausa-fim-${index}`}
                       className="block md:hidden text-xs font-medium text-slate-500 dark:text-slate-400 mb-1"
@@ -244,9 +248,11 @@ export const BreakEditorTab: React.FC<BreakEditorTabProps> = ({
                     />
                   </div>
 
-                  <div className="md:col-span-1 flex items-center justify-between md:justify-end text-xs font-mono tabular-nums text-slate-600 dark:text-slate-400">
-                    <span className="md:hidden font-sans">Aviso (10m antes):</span>
-                    <span>{previewAlertTime}</span>
+                  <div className="md:col-span-3 flex items-center justify-between md:justify-end text-xs font-mono tabular-nums text-slate-600 dark:text-slate-400">
+                    <span className="md:hidden font-sans">Avisos (10m · 5m):</span>
+                    <span>
+                      {alert10} · {alert5}
+                    </span>
                   </div>
 
                   <div className="md:col-span-1 flex justify-end">
