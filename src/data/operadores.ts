@@ -453,6 +453,14 @@ export const OPERADORES_ESCALA: Operador[] = [
     ],
   },
   {
+    nome: "ANA CLARA PEREIRA LOPES ANDRADE",
+    pausas: [
+      { tipo: "Pausa 1", horario: "15:50", horarioFim: "16:00" },
+      { tipo: "Lanche", horario: "17:35", horarioFim: "17:55" },
+      { tipo: "Pausa 2", horario: "19:10", horarioFim: "19:20" },
+    ],
+  },
+  {
     nome: "DAIANA LIMA",
     pausas: [
       { tipo: "Pausa 1", horario: "16:00", horarioFim: "16:10" },
